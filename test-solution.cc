@@ -49,24 +49,46 @@ int main(int argc, char *argv[])
     extraNodes.Create(NUMBER_OF_EXTRA_NODES);  // สร้างโหนด user ใหม่ 4 โหนด
 
     // Define the Point-To-Point Links and their Parameters
-    PointToPointHelper pp1, pp2;
+    PointToPointHelper pp1, pp2, pp3;
     pp1.SetDeviceAttribute("DataRate", StringValue("100Kbps"));
     pp1.SetChannelAttribute("Delay", StringValue("10ms"));
 
     pp2.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
     pp2.SetChannelAttribute("Delay", StringValue("10ms"));
 
+    pp3.SetDeviceAttribute("DataRate", StringValue("1Mbps"));
+    pp3.SetChannelAttribute("Delay", StringValue("1ms"));
+
     // Install the Point-To-Point Connections between Nodes
     NetDeviceContainer d02, d12, d23, d33, botDeviceContainer[NUMBER_OF_BOTS], extraDeviceContainer[NUMBER_OF_EXTRA_NODES];
-    d02 = pp2.Install(nodes.Get(0), nodes.Get(1));  // Node0 to Node1
-    d12 = pp2.Install(nodes.Get(0), nodes.Get(2));  // Node0 to Node2
-    d23 = pp2.Install(nodes.Get(1), nodes.Get(3));  // Node1 to Node3
-    d33 = pp2.Install(nodes.Get(2), nodes.Get(3));  // Node2 to Node3
+    d02 = pp2.Install(nodes.Get(0), nodes.Get(1));  // โหนดที่ 0 ต่อกับโหนดที่ 1
+    d12 = pp2.Install(nodes.Get(0), nodes.Get(2));  // โหนดที่ 1 ต่อกับโหนดที่ 2
+    d23 = pp1.Install(nodes.Get(1), nodes.Get(3));  // โหนดที่ 2 ต่อกับโหนดที่ 3 (โหนดที่เพิ่มเข้ามาใหม่)
+    d33 = pp1.Install(nodes.Get(2), nodes.Get(3));  // โหนดที่ 3
 
     // Bot nodes connect to legitimate node 0
     for (int i = 0; i < NUMBER_OF_BOTS; ++i)
     {
-        botDeviceContainer[i] = pp1.Install(botNodes.Get(i), nodes.Get(0));
+        botDeviceContainer[i] = pp3.Install(botNodes.Get(i), nodes.Get(0));
+    }
+
+    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
+    {
+        if (i < 2)
+        {
+            // Extra node 104, 105 connected to Node 0
+            extraDeviceContainer[i] = pp2.Install(nodes.Get(0), extraNodes.Get(i));
+        }
+        else if (i >= 2 && i < 4)
+        {
+            // Extra node 106, 107 connected to Node 1
+            extraDeviceContainer[i] = pp2.Install(nodes.Get(1), extraNodes.Get(i));
+        }
+        else if (i >= 4)
+        {
+            // Extra node 108, 109 connected to Node 2
+            extraDeviceContainer[i] = pp2.Install(nodes.Get(2), extraNodes.Get(i));
+        }
     }
 
     // Assign IP addresses to legitimate nodes and bots
@@ -79,23 +101,29 @@ int main(int argc, char *argv[])
     ipv4_n.SetBase("10.0.0.0", "255.255.255.252");
 
     Ipv4InterfaceContainer extraInterfaces[NUMBER_OF_EXTRA_NODES];
+
     for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
     {
         extraInterfaces[i] = ipv4_n.Assign(extraDeviceContainer[i]);
         ipv4_n.NewNetwork();
     }
 
-    // Assign IP addresses to legitimate nodes
     Ipv4AddressHelper a02, a12, a23;
-    a02.SetBase("10.1.1.0", "255.255.255.0");  // สำหรับการเชื่อมต่อ Node0 กับ Node1
-    a12.SetBase("10.1.2.0", "255.255.255.0");  // สำหรับการเชื่อมต่อ Node0 กับ Node2
-    a23.SetBase("10.1.3.0", "255.255.255.0");  // สำหรับการเชื่อมต่อ Node1 และ Node2 กับ Node3
+    a02.SetBase("10.1.1.0", "255.255.255.0");
+    a12.SetBase("10.1.2.0", "255.255.255.0");
+    a23.SetBase("10.1.3.0", "255.255.255.0");
 
+    for (int j = 0; j < NUMBER_OF_BOTS; ++j)
+    {
+        ipv4_n.Assign(botDeviceContainer[j]);
+        ipv4_n.NewNetwork();
+    }
+
+    // Assign IP addresses to legitimate nodes
     Ipv4InterfaceContainer i02, i12, i23;
-    i02 = a02.Assign(d02);  // กำหนด IP ให้กับการเชื่อมต่อ Node0 กับ Node1
-    i12 = a12.Assign(d12);  // กำหนด IP ให้กับการเชื่อมต่อ Node0 กับ Node2
-    i23 = a23.Assign(d23);  // กำหนด IP ให้กับการเชื่อมต่อ Node1 กับ Node3
-    i23 = a23.Assign(d33);  // กำหนด IP ให้กับการเชื่อมต่อ Node2 กับ Node3
+    i02 = a02.Assign(d02);
+    i12 = a12.Assign(d12);
+    i23 = a23.Assign(d23);  // กำหนด IP ให้กับโหนดที่ 3
 
     // DDoS Application Behaviour
     OnOffHelper onoff("ns3::UdpSocketFactory", Address(InetSocketAddress(i23.GetAddress(1), UDP_SINK_PORT)));
@@ -113,17 +141,17 @@ int main(int argc, char *argv[])
         onOffApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
     }
 
-    // BulkSend application on Node1 and Node2 to send TCP data to Node3
-    OnOffHelper onoffTcp("ns3::TcpSocketFactory", Address(InetSocketAddress(i23.GetAddress(0), TCP_SINK_PORT)));
+    // BulkSend on extra nodes to send TCP data to node3
+    OnOffHelper onoffTcp("ns3::TcpSocketFactory", Address(InetSocketAddress(i23.GetAddress(1), TCP_SINK_PORT)));
     onoffTcp.SetConstantRate(DataRate(DATA_RATE));
+    ApplicationContainer OnOffApp[NUMBER_OF_EXTRA_NODES];
 
-    ApplicationContainer OnOffApp1 = onoffTcp.Install(nodes.Get(1));  // ส่งจาก Node1 ไปยัง Node3
-    OnOffApp1.Start(Seconds(0.0));
-    OnOffApp1.Stop(Seconds(MAX_SIMULATION_TIME));
-
-    ApplicationContainer OnOffApp2 = onoffTcp.Install(nodes.Get(2));  // ส่งจาก Node2 ไปยัง Node3
-    OnOffApp2.Start(Seconds(0.0));
-    OnOffApp2.Stop(Seconds(MAX_SIMULATION_TIME));
+    for (int k = 0; k < NUMBER_OF_EXTRA_NODES; k++)
+    {
+        OnOffApp[k] = onoffTcp.Install(extraNodes.Get(k));
+        OnOffApp[k].Start(Seconds(0.0));
+        OnOffApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
+    }
 
     // UDPSink on the receiver side
     PacketSinkHelper UDPsink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), UDP_SINK_PORT)));
@@ -187,25 +215,24 @@ int main(int argc, char *argv[])
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 35);  // วางตำแหน่งของโหนดที่ 3
 
     // Set positions for extra nodes
-         for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
-{
-    if (i < 2)
+    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
     {
-        // Extra node 104, 105 connected to Node 0
-        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
+        if (i < 2)
+        {
+            // Extra node 104, 105 connected to Node 0
+            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
+        }
+        else if (i >= 2 && i < 4)
+        {
+            // Extra node 106, 107 connected to Node 1
+            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
+        }
+        else if (i >= 4)
+        {
+            // Extra node 108, 109 connected to Node 2
+            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
+        }
     }
-    else if (i >= 2 && i < 4)
-    {
-        // Extra node 106, 107 connected to Node 1
-        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
-    }
-    else if (i >= 4)
-    {
-        // Extra node 108, 109 connected to Node 2
-        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
-    }
-}
-
 
     // Flow Monitor setup
     FlowMonitorHelper flowHelper;
