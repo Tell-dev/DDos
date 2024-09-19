@@ -15,7 +15,6 @@
 #define UDP_SINK_PORT 9001
 
 // Experimental parameters
-#define MAX_BULK_BYTES 10000000
 #define DDOS_RATE "1Mb/s"
 #define MAX_SIMULATION_TIME 10
 
