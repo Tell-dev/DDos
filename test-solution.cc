@@ -15,6 +15,7 @@
 #define UDP_SINK_PORT 9001
 
 // Experimental parameters
+#define DATA_RATE "100Kb/s"
 #define DDOS_RATE "1Mb/s"
 #define MAX_SIMULATION_TIME 10
 
@@ -55,14 +56,14 @@ int main(int argc, char *argv[])
     pp2.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
     pp2.SetChannelAttribute("Delay", StringValue("10ms"));
 
-    pp3.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
+    pp3.SetDeviceAttribute("DataRate", StringValue("1Mbps"));
     pp3.SetChannelAttribute("Delay", StringValue("1ms"));
 
     // Install the Point-To-Point Connections between Nodes
-    NetDeviceContainer d02, d12, d23, d33, botDeviceContainer[NUMBER_OF_BOTS], extraDeviceContainer[NUMBER_OF_EXTRA_NODES];
-    d02 = pp3.Install(nodes.Get(0), nodes.Get(1));  
-    d12 = pp3.Install(nodes.Get(0), nodes.Get(2));  
-    d23 = pp1.Install(nodes.Get(1), nodes.Get(3));  
+    NetDeviceContainer d02, d12, d23, d33,  botDeviceContainer[NUMBER_OF_BOTS], extraDeviceContainer[NUMBER_OF_EXTRA_NODES];
+    d02 = pp2.Install(nodes.Get(0), nodes.Get(1));  // โหนดที่ 0 ต่อกับโหนดที่ 1
+    d12 = pp2.Install(nodes.Get(0), nodes.Get(2));  // โหนดที่ 1 ต่อกับโหนดที่ 2
+    d23 = pp1.Install(nodes.Get(1), nodes.Get(3));  // โหนดที่ 2 ต่อกับโหนดที่ 3 (โหนดที่เพิ่มเข้ามาใหม่)
     d33 = pp1.Install(nodes.Get(2), nodes.Get(3));
     // Bot nodes connect to legitimate node 0
     for (int i = 0; i < NUMBER_OF_BOTS; ++i)
@@ -140,19 +141,20 @@ int main(int argc, char *argv[])
     for (int k = 0; k < NUMBER_OF_BOTS; ++k)
     {
         onOffApp[k] = onoff.Install(botNodes.Get(k));
-        onOffApp[k].Start(Seconds(0.0));
+        onOffApp[k].Start(Seconds(1.0));
         onOffApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
     }
 
     // BulkSend on extra nodes to send TCP data to node3
-    BulkSendHelper extraBulkSend("ns3::TcpSocketFactory", InetSocketAddress(i23.GetAddress(1), TCP_SINK_PORT));
-    ApplicationContainer extraBulkSendApp[NUMBER_OF_EXTRA_NODES];
+    OnOffHelper onoffTcp("ns3::TcpSocketFactory", Address(InetSocketAddress(i23.GetAddress(1), TCP_SINK_PORT)));
+    onoffTcp.SetConstantRate(DataRate(DATA_RATE));
+    ApplicationContainer OnOffApp[NUMBER_OF_EXTRA_NODES];
 
     for (int k = 0; k < NUMBER_OF_EXTRA_NODES; k++)
     {
-        extraBulkSendApp[k] = extraBulkSend.Install(extraNodes.Get(k));
-        extraBulkSendApp[k].Start(Seconds(2.0));
-        extraBulkSendApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
+        OnOffApp[k] = onoff.Install(extraNodes.Get(k));
+        OnOffApp[k].Start(Seconds(0.0));
+        OnOffApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
     }
 
     // UDPSink on the receiver side
@@ -182,7 +184,7 @@ int main(int argc, char *argv[])
     mobility.Install(botNodes);
     mobility.Install(extraNodes);  // ติดตั้งตำแหน่งโหนด user ใหม่
 
-    AnimationInterface anim("DDos-topology-solution.xml");
+    AnimationInterface anim("Solution-topology.xml");
 
     // Load icons into NetAnim
     uint32_t node0Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/internet.png");
@@ -212,15 +214,30 @@ int main(int argc, char *argv[])
 
     // Set positions for the nodes
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(0), 50, 45);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(1), 110, 35);
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(1), 100, 30);
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(2), 110, 50);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 45);  // วางตำแหน่งของโหนดที่ 3
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 35);  // วางตำแหน่งของโหนดที่ 3
 
     // Set positions for extra nodes
-    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
+         for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
+{
+    if (i < 2)
     {
-        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 100 + (i * 10), 60);  // วางตำแหน่งของโหนด user ใหม่
+        // Extra node 104, 105 connected to Node 0
+        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
     }
+    else if (i >= 2 && i < 4)
+    {
+        // Extra node 106, 107 connected to Node 1
+        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
+    }
+    else if (i >= 4)
+    {
+        // Extra node 108, 109 connected to Node 2
+        ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
+    }
+}
+
 
     // Flow Monitor setup
     FlowMonitorHelper flowHelper;
@@ -232,7 +249,7 @@ int main(int argc, char *argv[])
     Simulator::Run();
 
     // Serialize Flow Monitor data to XML file
-    flowMonitor->SerializeToXmlFile("flowmonitor_ddos_solution.xml", true, true);
+    flowMonitor->SerializeToXmlFile("flowmonitor_solution.xml", true, true);
 
     Simulator::Destroy();
     return 0;
