@@ -17,7 +17,7 @@
 // Experimental parameters
 #define DATA_RATE "100Kb/s"
 #define DDOS_RATE "1Mb/s"
-#define MAX_SIMULATION_TIME 10
+#define MAX_SIMULATION_TIME 30
 
 // Number of Bots for DDoS
 #define NUMBER_OF_BOTS 100
@@ -50,22 +50,22 @@ int main(int argc, char *argv[])
 
     // Define the Point-To-Point Links and their Parameters
     PointToPointHelper pp1, pp2, pp3;
-    pp1.SetDeviceAttribute("DataRate", StringValue("100Kbps"));
+    pp1.SetDeviceAttribute("DataRate", StringValue("1Mbps"));
     pp1.SetChannelAttribute("Delay", StringValue("10ms"));
 
-    pp2.SetDeviceAttribute("DataRate", StringValue("10Mbps"));
+    pp2.SetDeviceAttribute("DataRate", StringValue("100Mbps"));
     pp2.SetChannelAttribute("Delay", StringValue("10ms"));
 
     pp3.SetDeviceAttribute("DataRate", StringValue("1Mbps"));
     pp3.SetChannelAttribute("Delay", StringValue("1ms"));
 
     // Install the Point-To-Point Connections between Nodes
-    NetDeviceContainer d02, d12, d23, d33, botDeviceContainer[NUMBER_OF_BOTS], extraDeviceContainer[NUMBER_OF_EXTRA_NODES];
+    NetDeviceContainer d02, d12, d23, d33, d43,  botDeviceContainer[NUMBER_OF_BOTS], extraDeviceContainer[NUMBER_OF_EXTRA_NODES];
     d02 = pp2.Install(nodes.Get(0), nodes.Get(1));  // โหนดที่ 0 ต่อกับโหนดที่ 1
-    d12 = pp2.Install(nodes.Get(0), nodes.Get(2));  // โหนดที่ 1 ต่อกับโหนดที่ 2
-    d23 = pp1.Install(nodes.Get(1), nodes.Get(3));  // โหนดที่ 2 ต่อกับโหนดที่ 3 (โหนดที่เพิ่มเข้ามาใหม่)
-    d33 = pp1.Install(nodes.Get(2), nodes.Get(3));  // โหนดที่ 3
-
+    d12 = pp2.Install(nodes.Get(0), nodes.Get(2));  // โหนดที่ 0 ต่อกับโหนดที่ 2
+    d23 = pp1.Install(nodes.Get(1), nodes.Get(3));  // โหนดที่ 1 ต่อกับโหนดที่ 3
+    d33 = pp1.Install(nodes.Get(2), nodes.Get(3));  // โหนดที่ 2 ต่อกับโหนดที่ 3
+    d43 = pp1.Install(nodes.Get(1), nodes.Get(2));  // โหนดที่ 1 ต่อกับโหนดที่ 2
     // Bot nodes connect to legitimate node 0
     for (int i = 0; i < NUMBER_OF_BOTS; ++i)
     {
@@ -108,10 +108,12 @@ int main(int argc, char *argv[])
         ipv4_n.NewNetwork();
     }
 
-    Ipv4AddressHelper a02, a12, a23;
+    Ipv4AddressHelper a02, a12, a23, a33, a43;
     a02.SetBase("10.1.1.0", "255.255.255.0");
     a12.SetBase("10.1.2.0", "255.255.255.0");
     a23.SetBase("10.1.3.0", "255.255.255.0");
+    a33.SetBase("10.1.4.0", "255.255.255.0");
+    a43.SetBase("10.1.5.0", "255.255.255.0");
 
     for (int j = 0; j < NUMBER_OF_BOTS; ++j)
     {
@@ -120,11 +122,12 @@ int main(int argc, char *argv[])
     }
 
     // Assign IP addresses to legitimate nodes
-    Ipv4InterfaceContainer i02, i12, i23;
+    Ipv4InterfaceContainer i02, i12, i23, i33, i43;
     i02 = a02.Assign(d02);
     i12 = a12.Assign(d12);
-    i23 = a23.Assign(d23);  // กำหนด IP ให้กับโหนดที่ 3
-
+    i23 = a23.Assign(d23);
+    i33 = a33.Assign(d33);
+    i43 = a43.Assign(d43);
     // DDoS Application Behaviour
     OnOffHelper onoff("ns3::UdpSocketFactory", Address(InetSocketAddress(i23.GetAddress(1), UDP_SINK_PORT)));
     onoff.SetConstantRate(DataRate(DDOS_RATE));
@@ -137,7 +140,7 @@ int main(int argc, char *argv[])
     for (int k = 0; k < NUMBER_OF_BOTS; ++k)
     {
         onOffApp[k] = onoff.Install(botNodes.Get(k));
-        onOffApp[k].Start(Seconds(1.0));
+        onOffApp[k].Start(Seconds(5.0));
         onOffApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
     }
 
