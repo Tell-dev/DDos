@@ -106,6 +106,9 @@ int main(int argc, char *argv[])
         }
     }
 
+    // เชื่อมต่อ firewall กับ Node 0
+    NetDeviceContainer firewallToNode0 = pp1.Install(firewallNode, nodes.Get(0)); // firewall เชื่อมกับ Node 0
+
     // กำหนดที่อยู่ IP
     Ipv4AddressHelper ipv4_n;
     ipv4_n.SetBase("10.0.0.0", "255.255.255.252");
@@ -180,93 +183,34 @@ int main(int argc, char *argv[])
     PacketSinkHelper UDPsink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), UDP_SINK_PORT)));
     ApplicationContainer UDPSinkApp = UDPsink.Install(nodes.Get(3));  // ติดตั้งบนโหนดที่ 3
     UDPSinkApp.Start(Seconds(0.0));
-     // ติดตั้ง TCP Sink Application บน server (node 3)
-    PacketSinkHelper TCPsink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), TCP_SINK_PORT));
+    
+    // ติดตั้ง TCPSink บน receiver (node 3)
+    PacketSinkHelper TCPsink("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), TCP_SINK_PORT)));
     ApplicationContainer TCPSinkApp = TCPsink.Install(nodes.Get(3));  // ติดตั้งบนโหนดที่ 3
     TCPSinkApp.Start(Seconds(0.0));
-    TCPSinkApp.Stop(Seconds(MAX_SIMULATION_TIME));
-
-    // กำหนดเส้นทางแบบ Global
-    Ipv4GlobalRoutingHelper::PopulateRoutingTables();
-
-    // การตั้งค่า NetAnim และการวางตำแหน่งโหนด
-    MobilityHelper mobility;
-
-    mobility.SetPositionAllocator("ns3::GridPositionAllocator",
-                                  "MinX", DoubleValue(0.0), "MinY", DoubleValue(0.0),
-                                  "DeltaX", DoubleValue(5.0), "DeltaY", DoubleValue(10.0),
-                                  "GridWidth", UintegerValue(5), "LayoutType", StringValue("RowFirst"));
-
-    mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-    mobility.Install(nodes);
-    mobility.Install(botNodes);
-    mobility.Install(extraNodes);  // ติดตั้งตำแหน่งโหนด user ใหม่
-
-    AnimationInterface anim("test.xml");
-
-    // โหลดไอคอนเข้าสู่ NetAnim
-    uint32_t node0Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/internet.png");
-    uint32_t node1Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
-    uint32_t node2Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
-    uint32_t node3Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/web_server.png");
-    uint32_t botIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/bot.png");
-    uint32_t extraNodeIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/computer.png");  // ไอคอนสำหรับโหนด user ใหม่
-
-    // กำหนดไอคอนให้กับแต่ละโหนด
-    anim.UpdateNodeImage(nodes.Get(0)->GetId(), node0Icon);
-    anim.UpdateNodeImage(nodes.Get(1)->GetId(), node1Icon);
-    anim.UpdateNodeImage(nodes.Get(2)->GetId(), node2Icon);
-    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon);  // กำหนด icon ให้กับโหนดที่ 3
-
-    // กำหนดไอคอนให้กับ bot nodes
-    for (int i = 0; i < NUMBER_OF_BOTS; ++i)
-    {
-        anim.UpdateNodeImage(botNodes.Get(i)->GetId(), botIcon);
-    }
-
-    // กำหนดไอคอนให้กับ extra nodes
-    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
-    {
-        anim.UpdateNodeImage(extraNodes.Get(i)->GetId(), extraNodeIcon);
-    }
-
-    // ตั้งตำแหน่งให้กับโหนดหลัก
-    anim.SetConstantPosition(nodes.Get(0), 50, 45);
-    anim.SetConstantPosition(nodes.Get(1), 100, 30);
-    anim.SetConstantPosition(nodes.Get(2), 110, 50);
-    anim.SetConstantPosition(nodes.Get(3), 160, 35);  // วางตำแหน่งของโหนดที่ 3
-
-    // ตั้งตำแหน่งให้กับ extra nodes
-    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
-    {
-        if (i < 2)
-        {
-            // Extra node 0, 1 connected to Node 0
-            anim.SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
-        }
-        else if (i >= 2 && i < 4)
-        {
-            // Extra node 2, 3 connected to Node 1
-            anim.SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
-        }
-        else
-        {
-            // Extra node 4, 5 connected to Node 2
-            anim.SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
-        }
-    }
 
     // ตั้งค่า Flow Monitor
     FlowMonitorHelper flowHelper;
-    Ptr<FlowMonitor> flowMonitor = flowHelper.InstallAll();
+    Ptr<FlowMonitor> monitor = flowHelper.InstallAll();
 
+    // เริ่ม simulation
     Simulator::Stop(Seconds(MAX_SIMULATION_TIME));
-
-    // เริ่มการจำลอง
     Simulator::Run();
 
-    // บันทึกข้อมูล Flow Monitor เป็นไฟล์ XML
-    flowMonitor->SerializeToXmlFile("solution-3-bot50.xml", true, true);
+    // แสดงผลข้อมูลจาก Flow Monitor
+    monitor->CheckForLostPackets();
+    Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowHelper.GetClassifier());
+    std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
+    for (auto it = stats.begin(); it != stats.end(); ++it)
+    {
+        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(it->first);
+        std::cout << "Flow ID: " << it->first << " | "
+                  << "Src Address: " << t.sourceAddress << " | "
+                  << "Dest Address: " << t.destinationAddress << " | "
+                  << "Tx Bytes: " << it->second.txBytes << " | "
+                  << "Rx Bytes: " << it->second.rxBytes << " | "
+                  << "Lost Packets: " << it->second.lostPackets << std::endl;
+    }
 
     Simulator::Destroy();
     return 0;
