@@ -184,78 +184,23 @@ int main(int argc, char *argv[])
     serverApp.Start(Seconds(0.0));
     serverApp.Stop(Seconds(MAX_SIMULATION_TIME));
 
-    // ติดตั้ง TcpSink บน node 3
-    PacketSinkHelper tcpSink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), TCP_SINK_PORT));
-    ApplicationContainer sinkApp = tcpSink.Install(nodes.Get(3));
-    sinkApp.Start(Seconds(0.0));
-    sinkApp.Stop(Seconds(MAX_SIMULATION_TIME));
+    // ติดตั้ง TCP sink บน node 3
+    PacketSinkHelper sink(TcpSocketFactory::GetTypeId(), InetSocketAddress(Ipv4Address::GetAny(), TCP_SINK_PORT));
+    ApplicationContainer sinkApps = sink.Install(nodes.Get(3));
+    sinkApps.Start(Seconds(0.0));
+    sinkApps.Stop(Seconds(MAX_SIMULATION_TIME));
 
-    // เริ่ม Flow Monitor
+    // ตั้งค่า FlowMonitor เพื่อวัดประสิทธิภาพการทำงาน
     FlowMonitorHelper flowHelper;
-    Ptr<FlowMonitor> flowMonitor = flowHelper.InstallAll();
+    Ptr<FlowMonitor> monitor = flowHelper.InstallAll();
 
-    // ตั้งค่า AnimationInterface
-    AnimationInterface anim("test.xml");
+    AnimationInterface anim("DDoSAnimation.xml");
 
-    // Load icons into NetAnim
-    uint32_t node0Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/internet.png");
-    uint32_t node1Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
-    uint32_t node2Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
-    uint32_t node3Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/web_server.png");
-    uint32_t botIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/bot.png");
-    uint32_t extraNodeIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/computer.png");  // ไอคอนสำหรับโหนด user ใหม่
-
-    // Assign icons to each node
-    anim.UpdateNodeImage(nodes.Get(0)->GetId(), node0Icon);
-    anim.UpdateNodeImage(nodes.Get(1)->GetId(), node1Icon);
-    anim.UpdateNodeImage(nodes.Get(2)->GetId(), node2Icon);
-    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon);  // กำหนด icon ให้กับโหนดที่ 3
-
-    // Assign icons to bot nodes
-    for (int i = 0; i < NUMBER_OF_BOTS; ++i)
-    {
-        anim.UpdateNodeImage(botNodes.Get(i)->GetId(), botIcon);
-    }
-
-    // Assign icons to extra nodes
-    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
-    {
-        anim.UpdateNodeImage(extraNodes.Get(i)->GetId(), extraNodeIcon);
-    }
-
-    // Set positions for the nodes
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(0), 50, 45);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(1), 100, 30);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(2), 110, 50);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 35);  // วางตำแหน่งของโหนดที่ 3
-
-    // Set positions for extra nodes
-    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
-    {
-        if (i < 2)
-        {
-            // Extra node 0, 1 connected to Node 0
-            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
-        }
-        else if (i >= 2 && i < 4)
-        {
-            // Extra node 2, 3 connected to Node 1
-            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
-        }
-        else if (i >= 4)
-        {
-            // Extra node 4, 5 connected to Node 2
-            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
-        }
-    }
-
-    // เริ่มต้นการจำลอง
     Simulator::Stop(Seconds(MAX_SIMULATION_TIME));
     Simulator::Run();
 
-    // สรุปข้อมูล Flow Monitor
-    flowMonitor->SerializeToXmlFile("flowMonitorResults.xml", true, true);
-
+    monitor->SerializeToXmlFile("flowMonitor.xml", true, true, true);
     Simulator::Destroy();
+
     return 0;
 }
