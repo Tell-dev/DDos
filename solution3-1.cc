@@ -204,3 +204,66 @@ int main(int argc, char *argv[])
     Simulator::Destroy();
     return 0;
 }
+
+
+
+
+
+
+
+
+
+
+AnimationInterface anim("test.xml");
+
+    // Load icons into NetAnim
+    uint32_t node0Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/internet.png");
+    uint32_t node1Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
+    uint32_t node2Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
+    uint32_t node3Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/web_server.png");
+    uint32_t botIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/bot.png");
+    uint32_t extraNodeIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/computer.png");  // ไอคอนสำหรับโหนด user ใหม่
+
+    // Assign icons to each node
+    anim.UpdateNodeImage(nodes.Get(0)->GetId(), node0Icon);
+    anim.UpdateNodeImage(nodes.Get(1)->GetId(), node1Icon);
+    anim.UpdateNodeImage(nodes.Get(2)->GetId(), node2Icon);
+    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon);  // กำหนด icon ให้กับโหนดที่ 3
+
+    // Assign icons to bot nodes
+    for (int i = 0; i < NUMBER_OF_BOTS; ++i)
+    {
+        anim.UpdateNodeImage(botNodes.Get(i)->GetId(), botIcon);
+    }
+
+    // Assign icons to extra nodes
+    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
+    {
+        anim.UpdateNodeImage(extraNodes.Get(i)->GetId(), extraNodeIcon);
+    }
+
+    // Set positions for the nodes
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(0), 50, 45);
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(1), 100, 30);
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(2), 110, 50);
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 35);  // วางตำแหน่งของโหนดที่ 3
+
+    // Set positions for extra nodes
+    for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
+    {
+        if (i < 2)
+        {
+            // Extra node 104, 105 connected to Node 0
+            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
+        }
+        else if (i >= 2 && i < 4)
+        {
+            // Extra node 106, 107 connected to Node 1
+            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
+        }
+        else if (i >= 4)
+        {
+            // Extra node 108, 109 connected to Node 2
+            ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
+        }
+    }
