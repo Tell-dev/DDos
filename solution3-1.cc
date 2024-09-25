@@ -194,27 +194,8 @@ int main(int argc, char *argv[])
     FlowMonitorHelper flowHelper;
     Ptr<FlowMonitor> flowMonitor = flowHelper.InstallAll();
 
-    // เริ่มต้นการจำลอง
-    Simulator::Stop(Seconds(MAX_SIMULATION_TIME));
-    Simulator::Run();
-
-    // สรุปข้อมูล Flow Monitor
-    flowMonitor->SerializeToXmlFile("flowMonitorResults.xml", true, true);
-
-    Simulator::Destroy();
-    return 0;
-}
-
-
-
-
-
-
-
-
-
-
-AnimationInterface anim("test.xml");
+    // ตั้งค่า AnimationInterface
+    AnimationInterface anim("test.xml");
 
     // Load icons into NetAnim
     uint32_t node0Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/internet.png");
@@ -253,17 +234,28 @@ AnimationInterface anim("test.xml");
     {
         if (i < 2)
         {
-            // Extra node 104, 105 connected to Node 0
+            // Extra node 0, 1 connected to Node 0
             ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 70 + (i * 10), 60);
         }
         else if (i >= 2 && i < 4)
         {
-            // Extra node 106, 107 connected to Node 1
+            // Extra node 2, 3 connected to Node 1
             ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 80 + (i * 10), 20);
         }
         else if (i >= 4)
         {
-            // Extra node 108, 109 connected to Node 2
+            // Extra node 4, 5 connected to Node 2
             ns3::AnimationInterface::SetConstantPosition(extraNodes.Get(i), 90 + (i * 10), 60);
         }
     }
+
+    // เริ่มต้นการจำลอง
+    Simulator::Stop(Seconds(MAX_SIMULATION_TIME));
+    Simulator::Run();
+
+    // สรุปข้อมูล Flow Monitor
+    flowMonitor->SerializeToXmlFile("flowMonitorResults.xml", true, true);
+
+    Simulator::Destroy();
+    return 0;
+}
