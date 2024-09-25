@@ -9,7 +9,6 @@
 #include "ns3/netanim-module.h"
 #include "ns3/flow-monitor.h"
 #include "ns3/flow-monitor-helper.h"
-#include "ns3/flow-monitor-module.h"
 
 #define TCP_SINK_PORT 9000
 #define UDP_SINK_PORT 9001
@@ -106,9 +105,6 @@ int main(int argc, char *argv[])
         }
     }
 
-    // เชื่อมต่อ firewall กับ Node 0
-    NetDeviceContainer firewallToNode0 = pp1.Install(firewallNode, nodes.Get(0)); // firewall เชื่อมกับ Node 0
-
     // กำหนดที่อยู่ IP
     Ipv4AddressHelper ipv4_n;
     ipv4_n.SetBase("10.0.0.0", "255.255.255.252");
@@ -133,6 +129,14 @@ int main(int argc, char *argv[])
     i23 = a23.Assign(d23);
     i33 = a33.Assign(d33);
     i43 = a43.Assign(d43);
+
+    // เชื่อมต่อ firewall node กับ Node 0
+    NetDeviceContainer firewallToNode0 = pp1.Install(firewallNode, nodes.Get(0)); // firewall เชื่อมกับ Node 0
+
+    // กำหนดที่อยู่ IP สำหรับการเชื่อมต่อ firewall และ Node 0
+    Ipv4AddressHelper firewallAddress;
+    firewallAddress.SetBase("10.1.6.0", "255.255.255.0");
+    Ipv4InterfaceContainer firewallToNode0Interface = firewallAddress.Assign(firewallToNode0);
 
     // กำหนด IP สำหรับ bot-to-firewall connections
     for (int j = 0; j < NUMBER_OF_BOTS; ++j)
@@ -179,38 +183,28 @@ int main(int argc, char *argv[])
         OnOffAppExtra[k].Stop(Seconds(MAX_SIMULATION_TIME));
     }
 
-    // ติดตั้ง UDPSink บน receiver (node 3)
-    PacketSinkHelper UDPsink("ns3::UdpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), UDP_SINK_PORT)));
-    ApplicationContainer UDPSinkApp = UDPsink.Install(nodes.Get(3));  // ติดตั้งบนโหนดที่ 3
-    UDPSinkApp.Start(Seconds(0.0));
-    
-    // ติดตั้ง TCPSink บน receiver (node 3)
-    PacketSinkHelper TCPsink("ns3::TcpSocketFactory", Address(InetSocketAddress(Ipv4Address::GetAny(), TCP_SINK_PORT)));
-    ApplicationContainer TCPSinkApp = TCPsink.Install(nodes.Get(3));  // ติดตั้งบนโหนดที่ 3
-    TCPSinkApp.Start(Seconds(0.0));
+    // ติดตั้ง UDPSink บน receiver node
+    UdpEchoServerHelper echoServer(UDP_SINK_PORT);
+    ApplicationContainer serverApp = echoServer.Install(nodes.Get(3));
+    serverApp.Start(Seconds(0.0));
+    serverApp.Stop(Seconds(MAX_SIMULATION_TIME));
 
-    // ตั้งค่า Flow Monitor
+    // ติดตั้ง TcpSink บน node 3
+    PacketSinkHelper tcpSink("ns3::TcpSocketFactory", InetSocketAddress(Ipv4Address::GetAny(), TCP_SINK_PORT));
+    ApplicationContainer sinkApp = tcpSink.Install(nodes.Get(3));
+    sinkApp.Start(Seconds(0.0));
+    sinkApp.Stop(Seconds(MAX_SIMULATION_TIME));
+
+    // เริ่ม Flow Monitor
     FlowMonitorHelper flowHelper;
-    Ptr<FlowMonitor> monitor = flowHelper.InstallAll();
+    Ptr<FlowMonitor> flowMonitor = flowHelper.InstallAll();
 
-    // เริ่ม simulation
+    // เริ่มต้นการจำลอง
     Simulator::Stop(Seconds(MAX_SIMULATION_TIME));
     Simulator::Run();
 
-    // แสดงผลข้อมูลจาก Flow Monitor
-    monitor->CheckForLostPackets();
-    Ptr<Ipv4FlowClassifier> classifier = DynamicCast<Ipv4FlowClassifier>(flowHelper.GetClassifier());
-    std::map<FlowId, FlowMonitor::FlowStats> stats = monitor->GetFlowStats();
-    for (auto it = stats.begin(); it != stats.end(); ++it)
-    {
-        Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow(it->first);
-        std::cout << "Flow ID: " << it->first << " | "
-                  << "Src Address: " << t.sourceAddress << " | "
-                  << "Dest Address: " << t.destinationAddress << " | "
-                  << "Tx Bytes: " << it->second.txBytes << " | "
-                  << "Rx Bytes: " << it->second.rxBytes << " | "
-                  << "Lost Packets: " << it->second.lostPackets << std::endl;
-    }
+    // สรุปข้อมูล Flow Monitor
+    flowMonitor->SerializeToXmlFile("flowMonitorResults.xml", true, true);
 
     Simulator::Destroy();
     return 0;
