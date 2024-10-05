@@ -19,9 +19,8 @@
 #define DDOS_RATE "1Mb/s"
 #define MAX_SIMULATION_TIME 10
 
-// Number of Bots for DDoS
-#define NUMBER_OF_BOTS 50
-#define NUMBER_OF_EXTRA_NODES 6  // จำนวนโหนด user ใหม่
+#define NUMBER_OF_BOTS 50  // จำนวน Bot
+#define NUMBER_OF_EXTRA_NODES 6  // จำนวนโหนด user
 
 using namespace ns3;
 
@@ -46,7 +45,7 @@ int main(int argc, char *argv[])
 
     // Nodes for extra users
     NodeContainer extraNodes;
-    extraNodes.Create(NUMBER_OF_EXTRA_NODES);  // สร้างโหนด user ใหม่ 4 โหนด
+    extraNodes.Create(NUMBER_OF_EXTRA_NODES);
 
     // Define the Point-To-Point Links and their Parameters
 PointToPointHelper pp1, pp2, pp3;
@@ -62,7 +61,7 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     NetDeviceContainer d02, d12, d23, botDeviceContainer[NUMBER_OF_BOTS], extraDeviceContainer[NUMBER_OF_EXTRA_NODES];
     d02 = pp2.Install(nodes.Get(0), nodes.Get(1));  // โหนดที่ 0 ต่อกับโหนดที่ 1
     d12 = pp2.Install(nodes.Get(1), nodes.Get(2));  // โหนดที่ 1 ต่อกับโหนดที่ 2
-    d23 = pp1.Install(nodes.Get(2), nodes.Get(3));  // โหนดที่ 2 ต่อกับโหนดที่ 3 (โหนดที่เพิ่มเข้ามาใหม่)
+    d23 = pp1.Install(nodes.Get(2), nodes.Get(3));  // โหนดที่ 2 ต่อกับโหนดที่ 3
 
     // Bot nodes connect to legitimate node 0
     for (int i = 0; i < NUMBER_OF_BOTS; ++i)
@@ -114,7 +113,7 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     Ipv4AddressHelper a02, a12, a23, a45, a56;
     a02.SetBase("10.1.1.0", "255.255.255.0");
     a12.SetBase("10.1.2.0", "255.255.255.0");
-    a23.SetBase("10.1.3.0", "255.255.255.0");  // สำหรับการเชื่อมต่อระหว่างโหนดที่ 2 และโหนดที่ 3
+    a23.SetBase("10.1.3.0", "255.255.255.0"); 
 
     for (int j = 0; j < NUMBER_OF_BOTS; ++j)
     {
@@ -126,7 +125,7 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     Ipv4InterfaceContainer i02, i12, i23, i45, i56;
     i02 = a02.Assign(d02);
     i12 = a12.Assign(d12);
-    i23 = a23.Assign(d23);  // กำหนด IP ให้กับโหนดที่ 3
+    i23 = a23.Assign(d23);
 
      // DDoS Application Behaviour
     OnOffHelper onoff("ns3::UdpSocketFactory", Address(InetSocketAddress(i23.GetAddress(1), UDP_SINK_PORT)));
@@ -182,7 +181,7 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(nodes);
     mobility.Install(botNodes);
-    mobility.Install(extraNodes);  // ติดตั้งตำแหน่งโหนด user ใหม่
+    mobility.Install(extraNodes);  
 
    AnimationInterface anim("DDos-topology.xml");
 
@@ -192,13 +191,13 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     uint32_t node2Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/router.png");
     uint32_t node3Icon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/web_server.png");
     uint32_t botIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/bot.png");
-    uint32_t extraNodeIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/computer.png");  // ไอคอนสำหรับโหนด user ใหม่
+    uint32_t extraNodeIcon = anim.AddResource("ns-allinone-3.42/ns-3.42/icon/computer.png");
 
     // Assign icons to each node
     anim.UpdateNodeImage(nodes.Get(0)->GetId(), node0Icon);
     anim.UpdateNodeImage(nodes.Get(1)->GetId(), node1Icon);
     anim.UpdateNodeImage(nodes.Get(2)->GetId(), node2Icon);
-    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon);  // กำหนด icon ให้กับโหนดที่ 3
+    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon); 
 
     // Assign icons to bot nodes
     for (int i = 0; i < NUMBER_OF_BOTS; ++i)
@@ -216,7 +215,7 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(0), 50, 45);
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(1), 80, 45);
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(2), 120, 45);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 45);  // วางตำแหน่งของโหนดที่ 3
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 45); 
 
     // Set positions for extra nodes
     for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
