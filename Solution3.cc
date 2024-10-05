@@ -19,8 +19,8 @@
 #define DDOS_RATE "1Mb/s"
 #define MAX_SIMULATION_TIME 10
 
-// Number of Bots for DDoS
-#define NUMBER_OF_BOTS 50
+
+#define NUMBER_OF_BOTS 50  // จำนวน bot
 #define NUMBER_OF_EXTRA_NODES 6  // จำนวนโหนด user ใหม่
 
 using namespace ns3;
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 
     // Nodes for extra users
     NodeContainer extraNodes;
-    extraNodes.Create(NUMBER_OF_EXTRA_NODES);  // สร้างโหนด user ใหม่ 4 โหนด
+    extraNodes.Create(NUMBER_OF_EXTRA_NODES); 
 
     // Define the Point-To-Point Links and their Parameters
     PointToPointHelper pp1, pp2, pp3;
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
     mobility.SetMobilityModel("ns3::ConstantPositionMobilityModel");
     mobility.Install(nodes);
     mobility.Install(botNodes);
-    mobility.Install(extraNodes);  // ติดตั้งตำแหน่งโหนด user ใหม่
+    mobility.Install(extraNodes);
     
         AnimationInterface anim("solution3-topology.xml");
 
@@ -194,7 +194,7 @@ int main(int argc, char *argv[])
     anim.UpdateNodeImage(nodes.Get(0)->GetId(), node0Icon);
     anim.UpdateNodeImage(nodes.Get(1)->GetId(), node1Icon);
     anim.UpdateNodeImage(nodes.Get(2)->GetId(), node2Icon);
-    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon);  // กำหนด icon ให้กับโหนดที่ 3
+    anim.UpdateNodeImage(nodes.Get(3)->GetId(), node3Icon);
 
     // Assign icons to bot nodes
     for (int i = 0; i < NUMBER_OF_BOTS; ++i)
@@ -212,7 +212,7 @@ int main(int argc, char *argv[])
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(0), 50, 45);
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(1), 100, 30);
     ns3::AnimationInterface::SetConstantPosition(nodes.Get(2), 110, 50);
-    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 35);  // วางตำแหน่งของโหนดที่ 3
+    ns3::AnimationInterface::SetConstantPosition(nodes.Get(3), 160, 35);
 
     // Set positions for extra nodes
     for (int i = 0; i < NUMBER_OF_EXTRA_NODES; ++i)
