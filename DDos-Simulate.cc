@@ -17,7 +17,7 @@
 // Experimental parameters
 #define DATA_RATE "1Mb/s"
 #define DDOS_RATE "1Mb/s"
-#define MAX_SIMULATION_TIME 60
+#define MAX_SIMULATION_TIME 10
 
 // Number of Bots for DDoS
 #define NUMBER_OF_BOTS 50
@@ -152,7 +152,7 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
     for (int k = 0; k < NUMBER_OF_EXTRA_NODES; k++)
     {
         OnOffApp[k] = onoffTcp.Install(extraNodes.Get(k));
-        OnOffApp[k].Start(Seconds(5.0));
+        OnOffApp[k].Start(Seconds(0.05));
         OnOffApp[k].Stop(Seconds(MAX_SIMULATION_TIME));
     }
 
@@ -238,20 +238,19 @@ pp3.SetChannelAttribute("Delay", StringValue("1ms"));
         }
     }
 
-
-
-    // Flow Monitor setup
+     // Flow Monitor setup
     FlowMonitorHelper flowHelper;
     Ptr<FlowMonitor> flowMonitor = flowHelper.InstallAll();
+
 
     Simulator::Stop(Seconds(MAX_SIMULATION_TIME));
 
     // Run the simulation
     Simulator::Run();
-
-    // Serialize Flow Monitor data to XML file
+    
+     // Serialize Flow Monitor data to XML file
     flowMonitor->SerializeToXmlFile("bot50.xml", true, true);
-
+    
     Simulator::Destroy();
     return 0;
 }
